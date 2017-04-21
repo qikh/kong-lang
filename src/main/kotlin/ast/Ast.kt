@@ -135,7 +135,7 @@ class InfixExpression(val token: Token, val left: Expression, val operator: Stri
 
 }
 
-class Program(var statements: List<out Statement> = listOf()): Node {
+class Program(var statements: List<out Statement> = listOf()) : Node {
     override fun tokenLiteral(): String {
         if (statements.isNotEmpty()) {
             return statements[0].tokenLiteral()

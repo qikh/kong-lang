@@ -1,19 +1,19 @@
 package types
 
-import kotlin.Boolean
-
 typealias ObjectType = String
 
 val INTEGER_OBJ = "INTEGER"
 val BOOL_OBJ = "BOOL"
 val NULL_OBJ = "NULL"
+val RETURN_VALUE_OBJ = "RETURN_VALUE"
+val ERROR_OBJ = "ERROR"
 
 interface Object {
     fun type(): ObjectType
     fun inspect(): String
 }
 
-class Integer(val value: Int): Object{
+class Integer(val value: Int) : Object {
 
     override fun type(): ObjectType {
         return INTEGER_OBJ
@@ -25,7 +25,7 @@ class Integer(val value: Int): Object{
 
 }
 
-class Boolean(val value: Boolean): Object{
+class Boolean(val value: kotlin.Boolean) : Object {
 
     override fun type(): ObjectType {
         return BOOL_OBJ
@@ -37,7 +37,7 @@ class Boolean(val value: Boolean): Object{
 
 }
 
-class Null: Object{
+class Null : Object {
 
     override fun type(): ObjectType {
         return NULL_OBJ
@@ -45,6 +45,30 @@ class Null: Object{
 
     override fun inspect(): String {
         return "null"
+    }
+
+}
+
+class ReturnValue(val value: Object) : Object {
+
+    override fun type(): ObjectType {
+        return RETURN_VALUE_OBJ
+    }
+
+    override fun inspect(): String {
+        return value.inspect()
+    }
+
+}
+
+class Error(val messge: String) : Object {
+
+    override fun type(): ObjectType {
+        return NULL_OBJ
+    }
+
+    override fun inspect(): String {
+        return "ERROR:$messge"
     }
 
 }

@@ -23,10 +23,13 @@ class Repl {
             .terminal(terminal)
             .appName("mini-vm")
             .build()
+        val writer = terminal.writer()
 
         while (true) {
             val line = lineReader.readLine(PROMPT)
             if (line == "quit") {
+                writer.write("Bye!")
+                writer.write("\n")
                 break
             }
             val lexer = Lexer(line)
@@ -34,7 +37,6 @@ class Repl {
             val p = Parser(lexer)
 
             val program = p.parseProgram()
-            val writer = terminal.writer()
             if (p.errors.size > 0) {
                 printParseErrors(writer, p.errors)
             }
