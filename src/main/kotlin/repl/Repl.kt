@@ -1,35 +1,26 @@
 package repl
 
 import evaluator.Eval
+import jline.console.ConsoleReader
 import lexer.Lexer
-import org.jline.reader.LineReaderBuilder
-import org.jline.terminal.TerminalBuilder
 import parser.Parser
+import java.io.PrintWriter
 import java.io.Writer
 
 class Repl {
     val PROMPT = ">> "
 
     fun Start() {
-        // Suppress warning message.
-        java.util.logging.LogManager
-            .getLogManager().
-            readConfiguration(javaClass.getResourceAsStream("/logging.properties"))
+        val reader = ConsoleReader()
+        reader.bellEnabled = false
+        reader.prompt = PROMPT
 
-        val terminal = TerminalBuilder.builder()
-            .system(true)
-            .build()
-        val lineReader = LineReaderBuilder.builder()
-            .terminal(terminal)
-            .appName("mini-vm")
-            .build()
-        val writer = terminal.writer()
+        val writer = PrintWriter(reader.output)
 
         while (true) {
-            val line = lineReader.readLine(PROMPT)
+            val line = reader.readLine()
             if (line == "quit") {
-                writer.write("Bye!")
-                writer.write("\n")
+                writer.println()
                 break
             }
             val lexer = Lexer(line)
@@ -42,8 +33,7 @@ class Repl {
             }
 
             val evaluated = Eval(program)
-            writer.write(evaluated.inspect())
-            writer.write("\n")
+            writer.println(evaluated.inspect())
         }
 
     }
