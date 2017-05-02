@@ -318,13 +318,13 @@ class Parser(val lexer: Lexer) {
     }
 
     fun parseLetStatement(): Statement? {
-        val stmt = LetStatement(curToken)
-
         if (!expectedPeek(token.IDENT)) {
             return null
         }
 
-        stmt.name = Identifier(curToken, curToken.literal)
+        val letToken = curToken
+
+        val letName = Identifier(curToken, curToken.literal)
 
         if (!expectedPeek(token.ASSIGN)) {
             return null
@@ -332,21 +332,20 @@ class Parser(val lexer: Lexer) {
 
         nextToken()
 
-        stmt.value = parseExpression(Precedence.LOWEST)
+        val letValue = parseExpression(Precedence.LOWEST)
 
         if (peekTokenIs(token.SEMICOLON)) {
             nextToken()
         }
 
+        val stmt = LetStatement(letToken, letName, letValue)
         return stmt
     }
 
     fun parseReturnStatement(): Statement? {
-        val stmt = ReturnStatement(curToken)
-
         nextToken()
 
-        stmt.returnValue = parseExpression(Precedence.LOWEST)
+        val stmt = ReturnStatement(curToken, parseExpression(Precedence.LOWEST))
 
         if (peekTokenIs(token.SEMICOLON)) {
             nextToken()

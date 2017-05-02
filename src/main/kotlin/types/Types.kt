@@ -2,6 +2,10 @@ package types
 
 typealias ObjectType = String
 
+val TRUE = types.Boolean(true)
+val FALSE = types.Boolean(false)
+val NULL = types.Null()
+
 val INTEGER_OBJ = "INTEGER"
 val BOOL_OBJ = "BOOL"
 val NULL_OBJ = "NULL"

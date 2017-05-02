@@ -151,7 +151,7 @@ class Program(var statements: List<out Statement> = listOf()) : Node {
     }
 }
 
-class LetStatement(var token: Token, var name: Identifier? = null, var value: Expression? = null) : Statement {
+class LetStatement(var token: Token, var name: Identifier, var value: Expression) : Statement {
     override fun tokenLiteral(): String {
         return this.token.literal
     }
@@ -176,7 +176,7 @@ class LetStatement(var token: Token, var name: Identifier? = null, var value: Ex
     }
 }
 
-class ReturnStatement(var token: Token, var returnValue: Expression? = null) : Statement {
+class ReturnStatement(var token: Token, var returnValue: Expression) : Statement {
     override fun tokenLiteral(): String {
         return this.token.literal
     }

@@ -1,48 +1,65 @@
 package evaluator
 
 import ast.*
+import environment.Environment
 import types.*
-import kotlin.Error
 
-val TRUE = types.Boolean(true)
-val FALSE = types.Boolean(false)
-val NULL = types.Null()
-
-fun Eval(node: Node): types.Object {
+fun Eval(node: Node, env: Environment): types.Object {
     when (node) {
-        is Program -> return evalProgram(node)
-        is ExpressionStatement -> return Eval(node.expression)
+        is Program -> return evalProgram(node, env)
+        is ExpressionStatement -> return Eval(node.expression, env)
         is IntegerLiteral -> return types.Integer(node.value)
         is BooleanLiteral -> return nativeBoolToBoolean(node.value)
         is PrefixExpression -> {
-            val rightVal = Eval(node.right)
+            val rightVal = Eval(node.right, env)
             if (isError(rightVal)) {
                 return rightVal
             }
             return evalPrefixExpression(node.operator, rightVal)
         }
         is InfixExpression -> {
-            val leftVal = Eval(node.left)
+            val leftVal = Eval(node.left, env)
             if (isError(leftVal)) {
                 return leftVal
             }
-            val rightVal = Eval(node.right)
+            val rightVal = Eval(node.right, env)
             if (isError(rightVal)) {
                 return rightVal
             }
             return evalInfixExpression(node.operator, leftVal, rightVal)
         }
-        is BlockStatement -> return evalBlockStatement(node)
-        is IfExpression -> return evalIfExpression(node)
+        is BlockStatement -> return evalBlockStatement(node, env)
+        is IfExpression -> return evalIfExpression(node, env)
         is ReturnStatement -> {
-            val value = Eval(node.returnValue!!)
+            val value = Eval(node.returnValue, env)
             if (isError(value)) {
                 return value
             }
             return ReturnValue(value)
         }
+        is LetStatement -> {
+            val value = Eval(node.value, env)
+
+            if (isError(value)) {
+                return value
+            }
+
+            return env.set(node.name.value, value)
+        }
+        is Identifier -> {
+            return evalIdentifier(node, env)
+        }
         else -> return NULL
     }
+}
+
+fun evalIdentifier(node: Identifier, env: Environment): Object {
+    val ident = env.get(node.value)
+    if (ident == null) {
+        return Error("identifier not found: " + node.value)
+    }
+
+    return ident
 }
 
 fun isError(obj: types.Object): Boolean {
@@ -52,11 +69,11 @@ fun isError(obj: types.Object): Boolean {
     return false
 }
 
-fun evalBlockStatement(node: BlockStatement): Object {
+fun evalBlockStatement(node: BlockStatement, env: Environment): Object {
     var result: types.Object = NULL
 
     for (statement in node.statements) {
-        result = Eval(statement)
+        result = Eval(statement, env)
 
         if (result != NULL) {
             if (result.type() == RETURN_VALUE_OBJ || result.type() == ERROR_OBJ) {
@@ -68,11 +85,11 @@ fun evalBlockStatement(node: BlockStatement): Object {
     return result
 }
 
-fun evalProgram(node: Program): Object {
+fun evalProgram(node: Program, env: Environment): Object {
     var result: types.Object = NULL
 
     for (statement in node.statements) {
-        result = Eval(statement)
+        result = Eval(statement, env)
 
         when (result) {
             is ReturnValue -> return result.value
@@ -84,17 +101,17 @@ fun evalProgram(node: Program): Object {
     return result
 }
 
-fun evalIfExpression(node: IfExpression): Object {
-    val condition = Eval(node.condition)
+fun evalIfExpression(node: IfExpression, env: Environment): Object {
+    val condition = Eval(node.condition, env)
 
     if (isError(condition)) {
         return condition
     }
 
     if (isTruth(condition)) {
-        return Eval(node.consequence)
+        return Eval(node.consequence, env)
     } else if (node.alternative != null) {
-        return Eval(node.alternative)
+        return Eval(node.alternative, env)
     } else {
         return NULL
     }
@@ -113,7 +130,7 @@ fun evalInfixExpression(operator: String, left: Object, right: Object): Object {
     if (left.type() == types.INTEGER_OBJ && right.type() == types.INTEGER_OBJ) {
         return evalIntegerInfixExpression(operator, left, right)
     } else if (left.type() != right.type()) {
-        return types.Error("type mismatch: ${left.type()} ${right.type()}")
+        return types.Error("type mismatch: ${left.type()} $operator ${right.type()}")
     } else if (operator == "==") {
         return nativeBoolToBoolean(left == right)
     } else if (operator == "!=") {
@@ -174,18 +191,4 @@ fun nativeBoolToBoolean(value: Boolean): types.Boolean {
         return FALSE
     }
 
-}
-
-fun evalStatements(statements: List<out Statement>): Object {
-    var result: types.Object = Null()
-
-    statements.forEach {
-        result = Eval(it)
-
-        if (result is ReturnValue) {
-            return (result as ReturnValue).value
-        }
-    }
-
-    return result
 }

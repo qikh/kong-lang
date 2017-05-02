@@ -1,5 +1,6 @@
 package repl
 
+import environment.Environment
 import evaluator.Eval
 import jline.console.ConsoleReader
 import lexer.Lexer
@@ -11,6 +12,8 @@ class Repl {
     val PROMPT = ">> "
 
     fun Start() {
+        val env = Environment()
+
         val reader = ConsoleReader()
         reader.bellEnabled = false
         reader.prompt = PROMPT
@@ -32,7 +35,7 @@ class Repl {
                 printParseErrors(writer, p.errors)
             }
 
-            val evaluated = Eval(program)
+            val evaluated = Eval(program, env)
             writer.println(evaluated.inspect())
         }
 
