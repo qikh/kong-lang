@@ -30,6 +30,8 @@ class LexerTest {
 
                     10 == 10;
                     10 != 9;
+                    "foobar"
+                    "foo bar"
                     """
 
         val tests = arrayOf(
@@ -106,6 +108,8 @@ class LexerTest {
             Expected(token.NOT_EQ, "!="),
             Expected(token.INT, "9"),
             Expected(token.SEMICOLON, ";"),
+            Expected(token.STRING, "foobar"),
+            Expected(token.STRING, "foo bar"),
             Expected(token.EOF, "")
         )
 

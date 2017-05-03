@@ -176,6 +176,39 @@ class ParserTest {
         return true
     }
 
+    @Test
+    fun testStringLiteralExpression() {
+        val input = """
+                    "hello world"
+                    """
+
+        val lexer = Lexer(input)
+        val p = Parser(lexer)
+
+        val program = p.parseProgram()
+
+        if (p.errors.size > 0) {
+            println("parser has ${p.errors.size} errors")
+            p.errors.forEach { println("parser error $it") }
+            assert(p.errors.size > 0)
+        }
+
+        assertNotNull(program)
+        assertEquals(program.statements.size, 1)
+
+        val stmt = program.statements[0]
+        assert(stmt is ExpressionStatement)
+
+        if (stmt is ExpressionStatement) {
+            assert(stmt.expression is StringLiteral)
+
+            val exp = stmt.expression
+            if (exp is StringLiteral) {
+                assertEquals(exp.value, "hello world")
+            }
+        }
+    }
+
     fun testBooleanLiteral(exp: Expression, value: Boolean): Boolean {
         if (exp is BooleanLiteral) {
             assertEquals(exp.value, value)

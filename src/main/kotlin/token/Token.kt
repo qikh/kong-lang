@@ -41,6 +41,8 @@ val IF: TokenType = "IF"
 val ELSE: TokenType = "ELSE"
 val RETURN: TokenType = "RETURN"
 
+val STRING: TokenType = "STRING"
+
 data class Token(val type: TokenType, val literal: String)
 
 var keywords = hashMapOf(

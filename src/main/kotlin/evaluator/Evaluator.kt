@@ -3,6 +3,7 @@ package evaluator
 import ast.*
 import environment.Environment
 import types.*
+import types.Function
 
 fun Eval(node: Node, env: Environment): types.Object {
     when (node) {
@@ -10,6 +11,7 @@ fun Eval(node: Node, env: Environment): types.Object {
         is ExpressionStatement -> return Eval(node.expression, env)
         is IntegerLiteral -> return types.Integer(node.value)
         is BooleanLiteral -> return nativeBoolToBoolean(node.value)
+        is StringLiteral -> return types.Str(node.value)
         is PrefixExpression -> {
             val rightVal = Eval(node.right, env)
             if (isError(rightVal)) {
@@ -49,17 +51,87 @@ fun Eval(node: Node, env: Environment): types.Object {
         is Identifier -> {
             return evalIdentifier(node, env)
         }
+        is FunctionLiteral -> {
+            val params = node.parameters
+            val body = node.body
+
+            return Function(params, body, env)
+        }
+        is CallExpression -> {
+            val function = Eval(node.function, env)
+
+            if (isError(function)) {
+                return function
+            }
+
+            val args = evalExpressions(node.arguments, env)
+            if (args.size == 1 && isError(args[0])) {
+                return args[0]
+            }
+
+            return applyFunction(function, args)
+        }
         else -> return NULL
     }
 }
 
-fun evalIdentifier(node: Identifier, env: Environment): Object {
-    val ident = env.get(node.value)
-    if (ident == null) {
-        return Error("identifier not found: " + node.value)
+fun applyFunction(function: Object, args: List<Object>): Object {
+
+    when (function) {
+        is Function -> {
+            val extendedEnv = extendedFunctionEnv(function, args)
+            val evaluated = Eval(function.body, extendedEnv)
+            return unwrapReturnValue(evaluated)
+        }
+        is Builtin -> {
+            return function.builtinFn.invoke(args)
+        }
+        else -> return Error("not a function: ${function.type()}")
+    }
+}
+
+fun extendedFunctionEnv(function: Function, args: List<Object>): Environment {
+
+    val env = Environment(function.env)
+
+    for (i in 0..function.parameters.size - 1) {
+        env.set(function.parameters[i].value, args[i])
     }
 
-    return ident
+    return env
+}
+
+fun unwrapReturnValue(obj: Object): Object {
+    if (obj is ReturnValue) {
+        return obj.value
+    }
+    return obj
+}
+
+fun evalExpressions(arguments: List<Expression>, env: Environment): List<types.Object> {
+    val result = mutableListOf<types.Object>()
+    arguments.forEach {
+        val evaluated = Eval(it, env)
+        if (isError(evaluated)) {
+            return listOf(evaluated)
+        }
+        result.add(evaluated)
+    }
+    return result.toList()
+}
+
+fun evalIdentifier(node: Identifier, env: Environment): Object {
+    val ident = env.get(node.value)
+    if (ident != null) {
+        return ident
+    }
+
+    val builtin = builtinFunctions.get(node.value)
+    if (builtin != null) {
+        return builtin
+    }
+
+    return Error("identifier not found: " + node.value)
 }
 
 fun isError(obj: types.Object): Boolean {
@@ -131,6 +203,8 @@ fun evalInfixExpression(operator: String, left: Object, right: Object): Object {
         return evalIntegerInfixExpression(operator, left, right)
     } else if (left.type() != right.type()) {
         return types.Error("type mismatch: ${left.type()} $operator ${right.type()}")
+    } else if (left.type() == types.STRING_OBJ && right.type() == types.STRING_OBJ) {
+        return evalStringInfixExpression(operator, left, right)
     } else if (operator == "==") {
         return nativeBoolToBoolean(left == right)
     } else if (operator == "!=") {
@@ -149,6 +223,20 @@ fun evalIntegerInfixExpression(operator: String, left: Object, right: Object): O
         "-" -> return Integer(leftVal - rightVal)
         "*" -> return Integer(leftVal * rightVal)
         "/" -> return Integer(leftVal / rightVal)
+        "<" -> return nativeBoolToBoolean(leftVal < rightVal)
+        ">" -> return nativeBoolToBoolean(leftVal > rightVal)
+        "==" -> return nativeBoolToBoolean(leftVal == rightVal)
+        "!=" -> return nativeBoolToBoolean(leftVal != rightVal)
+        else -> return types.Error("unknown operator: ${left.type()} $operator ${right.type()}")
+    }
+}
+
+fun evalStringInfixExpression(operator: String, left: Object, right: Object): Object {
+    val leftVal = (left as Str).value
+    val rightVal = (right as Str).value
+
+    when (operator) {
+        "+" -> return Str(leftVal + rightVal)
         "<" -> return nativeBoolToBoolean(leftVal < rightVal)
         ">" -> return nativeBoolToBoolean(leftVal > rightVal)
         "==" -> return nativeBoolToBoolean(leftVal == rightVal)

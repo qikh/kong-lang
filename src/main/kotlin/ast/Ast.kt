@@ -74,6 +74,21 @@ class LongLiteral(val token: Token, val value: Long) : Expression {
 
 }
 
+class StringLiteral(val token: Token, val value: String) : Expression {
+    override fun tokenLiteral(): String {
+        return token.literal
+    }
+
+    override fun expressionNode(): Node {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun toString(): String {
+        return token.literal
+    }
+
+}
+
 class BooleanLiteral(val token: Token, val value: Boolean) : Expression {
     override fun tokenLiteral(): String {
         return token.literal

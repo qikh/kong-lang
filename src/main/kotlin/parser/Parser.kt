@@ -71,6 +71,10 @@ class Parser(val lexer: Lexer) {
         BooleanLiteral(curToken, curTokenIs(token.TRUE))
     }
 
+    val parseStringLiteral: () -> Expression = {
+        StringLiteral(curToken, curToken.literal)
+    }
+
     val parsePrefixExpression: () -> Expression = {
         val token = curToken
 
@@ -246,6 +250,7 @@ class Parser(val lexer: Lexer) {
         registerPrefix(token.MINUS, parsePrefixExpression)
         registerPrefix(token.TRUE, parseBoolean)
         registerPrefix(token.FALSE, parseBoolean)
+        registerPrefix(token.STRING, parseStringLiteral)
 
         registerPrefix(token.LPAREN, parseGroupedExpression)
 

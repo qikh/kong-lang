@@ -59,6 +59,17 @@ class Lexer(val input: String, var position: Int = 0, var readPosition: Int = 0,
         return '0' <= c && c <= '9'
     }
 
+    fun readString(): String {
+        val positionSave = position + 1
+        while (true) {
+            readChar()
+            if (ch == '"') {
+                break
+            }
+        }
+        return input.substring(positionSave, position)
+    }
+
     fun nextToken(): Token {
         var tok: Token
 
@@ -92,6 +103,7 @@ class Lexer(val input: String, var position: Int = 0, var readPosition: Int = 0,
             '}' -> tok = newToken(token.RBRACE, ch)
             '(' -> tok = newToken(token.LPAREN, ch)
             ')' -> tok = newToken(token.RPAREN, ch)
+            '"' -> tok = Token(token.STRING, readString())
             EOF_CHAR -> tok = Token(token.EOF, "")
             else ->
                 if (isLetter(ch)) {

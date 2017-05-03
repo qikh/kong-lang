@@ -1,9 +1,21 @@
 package environment
 
-class Environment(val store: MutableMap<String, types.Object> = mutableMapOf()) {
+class Environment() {
+
+    val store: MutableMap<String, types.Object> = mutableMapOf()
+
+    var outer: Environment? = null
+
+    constructor(outerEnv: Environment? = null): this() {
+        outer = outerEnv
+    }
 
     fun get(name: String): types.Object? {
-        return store.get(name)
+        val obj = store.get(name)
+        if (obj == null) {
+            return outer?.get(name)
+        }
+        return obj
     }
 
     fun set(name: String, value: types.Object): types.Object {

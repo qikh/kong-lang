@@ -4,6 +4,7 @@ import environment.Environment
 import lexer.Lexer
 import org.junit.Test
 import parser.Parser
+import types.Error
 import types.NULL
 import types.Object
 import kotlin.test.assertEquals
@@ -189,6 +190,67 @@ class EvaluatorTest {
 
             if (evaluated is types.Integer) {
                 testIntegerObject(evaluated, expected)
+            } else {
+                testNullObject(evaluated)
+            }
+        }
+    }
+
+    @Test
+    fun testFunctionApplication() {
+        val tests = mapOf(
+            "let identity = fn(x){x;} identity(5);" to 5,
+            "let identity = fn(x){return x;} identity(5);" to 5,
+            "let dbl = fn(x){x * 2;} dbl(5);" to 10,
+            "let add = fn(x, y){x + y;} add(5, 5);" to 10,
+            "let add = fn(x, y){x + y;} add(5 + 5, add(5,5));" to 20,
+            "fn(x){x;} (5)" to 5
+        )
+
+        for ((input, expected) in tests) {
+            val evaluated = testEval(input)
+
+            assert(evaluated is types.Integer)
+
+            if (evaluated is types.Integer) {
+                testIntegerObject(evaluated, expected)
+            } else {
+                testNullObject(evaluated)
+            }
+        }
+    }
+
+    @Test
+    fun testStringLiteral() {
+        val input = """
+                    "Hello world"
+                    """
+
+        val evaluated = testEval(input)
+
+        assert(evaluated is types.Str)
+
+        if (evaluated is types.Str) {
+            assert(evaluated.value == "Hello world")
+        }
+    }
+
+    @Test
+    fun testBuiltinFunction() {
+        val tests = mapOf(
+            "len(\"\")" to 0,
+            "len(\"four\")" to 4,
+            "len(1)" to "argument to `len` not supported, got INTEGER",
+            "len(\"one\",\"two\")" to "wrong number of arguments."
+        )
+
+        for ((input, expected) in tests) {
+            val evaluated = testEval(input)
+
+            if (evaluated is types.Integer && expected is Int) {
+                testIntegerObject(evaluated, expected)
+            } else if (evaluated is Error && expected is String) {
+                assertEquals(evaluated.messge, expected)
             } else {
                 testNullObject(evaluated)
             }
