@@ -10,7 +10,7 @@ prog
     ;
 
 statementList
-    : ( statement eos )*
+    : ( statement eos? )*
     ;
 
 statement
