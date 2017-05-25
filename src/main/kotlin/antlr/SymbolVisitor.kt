@@ -9,7 +9,7 @@ class SymbolVisitor(internal var functions: MutableMap<String, Function>) : Kong
 
     override fun visitFunctionDeclStatement(ctx: KongParser.FunctionDeclStatementContext): NodeValue {
         val params = if (ctx.idList() != null) ctx.idList().ID() else ArrayList<TerminalNode>()
-        val block = ctx.block()
+        val block = ctx.expression()?:ctx.block()
         val id = ctx.ID().text + params.size
         functions.put(id, Function(id, params, block))
         return NodeValue.VOID

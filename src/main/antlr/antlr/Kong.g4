@@ -55,7 +55,8 @@ forStatement
     ;
 
 functionDeclStatement
-    : 'def' ID '(' idList? ')' block
+    : 'def' ID '(' idList? ')' '=' expression NEWLINE
+    | 'def' ID '(' idList? ')' '=' block
     ;
 
 idList
