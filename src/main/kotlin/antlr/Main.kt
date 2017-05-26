@@ -2,9 +2,7 @@ package antlr
 
 import org.antlr.v4.runtime.ANTLRInputStream
 import org.antlr.v4.runtime.CommonTokenStream
-import org.antlr.v4.runtime.tree.ParseTree
-
-import java.util.HashMap
+import java.util.*
 
 fun main(args: Array<String>) {
     try {

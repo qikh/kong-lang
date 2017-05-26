@@ -1,6 +1,6 @@
 package antlr
 
-import java.util.HashMap
+import java.util.*
 
 class Scope {
     private var parent: Scope? = null

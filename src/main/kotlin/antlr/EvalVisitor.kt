@@ -12,6 +12,16 @@ class EvalVisitor(var scope: Scope?,
         return NodeValue.VOID
     }
 
+    // list: '[' exprList? ']'
+    override fun visitList(ctx: ListContext): NodeValue {
+        val list = ArrayList<NodeValue>()
+        if (ctx.expressionList() != null) {
+            for (ex in ctx.expressionList().expression()) {
+                list.add(this.visit(ex))
+            }
+        }
+        return NodeValue(list)
+    }
 
     // '-' expression                           #unaryMinusExpression
     override fun visitUnaryMinusExpression(ctx: UnaryMinusExpressionContext): NodeValue {
@@ -98,7 +108,7 @@ class EvalVisitor(var scope: Scope?,
     }
 
     // expression '+' expression                #addExpression
-    override fun visitAddExpression(@NotNull ctx: AddExpressionContext): NodeValue {
+    override fun visitAddExpression(ctx: AddExpressionContext): NodeValue {
         val lhs = this.visit(ctx.expression(0))
         val rhs = this.visit(ctx.expression(1))
 
@@ -246,12 +256,29 @@ class EvalVisitor(var scope: Scope?,
     }
 
 
-    // Number                                   #numberExpression
+    // expression In expression                 #inExpression
+    override fun visitInExpression(ctx: InExpressionContext): NodeValue {
+        val lhs = this.visit(ctx.expression(0))
+        val rhs = this.visit(ctx.expression(1))
+
+        if (rhs.isList) {
+            for (value in rhs.asList()) {
+                if (value.equals(lhs)) {
+                    return NodeValue(true)
+                }
+            }
+            return NodeValue(false)
+        }
+        throw EvalException(ctx)
+    }
+
+
+    // Int                                      #intExpression
     override fun visitIntExpression(ctx: IntExpressionContext): NodeValue {
         return NodeValue(Integer.valueOf(ctx.text))
     }
 
-    // Number                                   #numberExpression
+    // Float                                    #floatExpression
     override fun visitFloatExpression(ctx: FloatExpressionContext): NodeValue {
         return NodeValue(java.lang.Double.valueOf(ctx.text))
     }
@@ -266,7 +293,8 @@ class EvalVisitor(var scope: Scope?,
         return NodeValue.NULL
     }
 
-    private fun resolveIndexes(ctx: ParserRuleContext, nodeValue: NodeValue, indexes: List<ExpressionContext>): NodeValue {
+    private fun resolveIndexes(ctx: ParserRuleContext, nodeValue: NodeValue,
+                               indexes: List<ExpressionContext>): NodeValue {
         var value = nodeValue
         for (ec in indexes) {
             val idx = this.visit(ec)
@@ -304,7 +332,7 @@ class EvalVisitor(var scope: Scope?,
         value.asList()[idx.asInt()] = newVal
     }
 
-    // functionCall indexes?                    #functionCallExpression
+    // functionCall                             #functionCallExpression
     override fun visitFunctionCallExpression(ctx: FunctionCallExpressionContext): NodeValue {
         val key = this.visit(ctx.functionCall())
         return key
@@ -313,7 +341,7 @@ class EvalVisitor(var scope: Scope?,
 
     // Identifier indexes?                      #identifierExpression
     override fun visitIdentifierExpression(ctx: IdentifierExpressionContext): NodeValue {
-        val id = ctx.ID().text
+        val id = ctx.Identifier().text
         var key = scope?.resolve(id)
 
         if (ctx.indexes() != null && key != null) {
@@ -351,13 +379,13 @@ class EvalVisitor(var scope: Scope?,
     override fun visitAssignmentStatement(ctx: AssignmentStatementContext): NodeValue {
         val newVal = this.visit(ctx.expression())
         if (ctx.indexes() != null) {
-            val value = scope?.resolve(ctx.ID().text)
+            val value = scope?.resolve(ctx.Identifier().text)
             val exps = ctx.indexes().expression()
             if (value != null) {
                 setAtIndex(ctx, exps, value, newVal)
             }
         } else {
-            val id = ctx.ID().text
+            val id = ctx.Identifier().text
             scope?.assign(id, newVal)
         }
         return NodeValue.VOID
@@ -366,7 +394,7 @@ class EvalVisitor(var scope: Scope?,
     // Identifier '(' exprList? ')' #identifierFunctionCall
     override fun visitIdentifierFunctionCall(ctx: IdentifierFunctionCallContext): NodeValue {
         val params = if (ctx.expressionList() != null) ctx.expressionList().expression() else ArrayList<ExpressionContext>()
-        val id = ctx.ID().text + params.size
+        val id = ctx.Identifier().text + params.size
         val function = functions[id]
         if (function != null) {
             return function.invoke(params, functions, scope)
@@ -378,6 +406,42 @@ class EvalVisitor(var scope: Scope?,
     override fun visitPrintlnFunctionCall(ctx: PrintlnFunctionCallContext): NodeValue {
         println(this.visit(ctx.expression()))
         return NodeValue.VOID
+    }
+
+    // Print '(' expression ')'     #printFunctionCall
+    override fun visitPrintFunctionCall(@NotNull ctx: PrintFunctionCallContext): NodeValue {
+        print(this.visit(ctx.expression()))
+        return NodeValue.VOID
+    }
+
+    // Assert '(' expression ')'    #assertFunctionCall
+    override fun visitAssertFunctionCall(ctx: AssertFunctionCallContext): NodeValue {
+        val value = this.visit(ctx.expression())
+
+        if (!value.isBoolean) {
+            throw EvalException(ctx)
+        }
+
+        if (!value.asBoolean()) {
+            throw AssertionError("Failed Assertion " + ctx.expression().text + " line:" + ctx.start.line)
+        }
+
+        return NodeValue.VOID
+    }
+
+    // Size '(' expression ')'      #sizeFunctionCall
+    override fun visitSizeFunctionCall(ctx: SizeFunctionCallContext): NodeValue {
+        val value = this.visit(ctx.expression())
+
+        if (value.isString) {
+            return NodeValue(value.asString().length)
+        }
+
+        if (value.isList) {
+            return NodeValue(value.asList().size)
+        }
+
+        throw EvalException(ctx)
     }
 
     // ifStatement
@@ -398,13 +462,13 @@ class EvalVisitor(var scope: Scope?,
     override fun visitIfStatement(ctx: IfStatementContext): NodeValue {
 
         // if ...
-        if (this.visit(ctx.ifStat().expression()).asBoolean()!!) {
+        if (this.visit(ctx.ifStat().expression()).asBoolean()) {
             return this.visit(ctx.ifStat().block())
         }
 
         // else if ...
         for (i in 0..ctx.elseIfStat().size - 1) {
-            if (this.visit(ctx.elseIfStat(i).expression()).asBoolean()!!) {
+            if (this.visit(ctx.elseIfStat(i).expression()).asBoolean()) {
                 return this.visit(ctx.elseIfStat(i).block())
             }
         }
@@ -432,7 +496,7 @@ class EvalVisitor(var scope: Scope?,
 
         scope = scope?.parent()
 
-        if (lastResult != null && !lastResult?.isVoid) {
+        if (lastResult != null && !lastResult.isVoid) {
             returnValue.value = lastResult
             scope = scope?.parent()
             throw returnValue
@@ -440,16 +504,22 @@ class EvalVisitor(var scope: Scope?,
         return NodeValue.VOID
     }
 
+    // block
+    // return the result of statement list.
+    override fun visitBlock(ctx: BlockContext): NodeValue {
+        return visit(ctx.statementList())
+    }
+
     // forStatement
     // : For Identifier '=' expression To expression OBrace block CBrace
     // ;
     override fun visitForStatement(ctx: ForStatementContext): NodeValue {
-        val start = this.visit(ctx.INT(0)).asInt()!!
-        val stop = this.visit(ctx.INT(1)).asInt()!!
+        val start = this.visit(ctx.expression(0)).asInt()
+        val stop = this.visit(ctx.expression(1)).asInt()
         for (i in start..stop) {
-            scope?.assign(ctx.ID().text, NodeValue(i))
+            scope?.assign(ctx.Identifier().text, NodeValue(i))
             val returnValue = this.visit(ctx.block())
-            if (returnValue !== NodeValue.VOID) {
+            if (returnValue != null && !returnValue.isVoid) {
                 return returnValue
             }
         }
@@ -465,6 +535,19 @@ class EvalVisitor(var scope: Scope?,
             returnValue.value = value
             scope = scope?.parent()
             throw returnValue
+        }
+        return NodeValue.VOID
+    }
+
+    // whileStatement
+    // : While expression OBrace block CBrace
+    // ;
+    override fun visitWhileStatement(ctx: WhileStatementContext): NodeValue {
+        while (this.visit(ctx.expression()).asBoolean()) {
+            val returnValue = this.visit(ctx.block())
+            if (returnValue != null && !returnValue.isVoid) {
+                return returnValue
+            }
         }
         return NodeValue.VOID
     }

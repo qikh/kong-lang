@@ -17,13 +17,13 @@ class Function(val id: String, val params: List<TerminalNode>, val block: ParseT
             val value = evalVisitor.visit(params[i])
             functionScope.assignParam(this.params[i].text, value)
         }
-        var ret : NodeValue?
+        var ret: NodeValue?
         try {
             ret = evalVisitor.visit(this.block)
         } catch (returnValue: ReturnValue) {
             ret = returnValue.value
         }
 
-        return ret?: NodeValue.VOID
+        return ret ?: NodeValue.VOID
     }
 }

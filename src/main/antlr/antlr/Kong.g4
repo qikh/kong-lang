@@ -20,10 +20,12 @@ statement
     | functionDeclStatement
     | ifStatement
     | forStatement
+    | whileStatement
+    | eos
     ;
 
 assignmentStatement
-    : 'let' ID indexes? '=' expression
+    : 'let'? Identifier indexes? '=' expression
     ;
 
 expressionStatement
@@ -51,16 +53,20 @@ elseStat
     ;
 
 forStatement
-    : 'for' '(' ID 'in' start=INT 'to' end=INT ')'  block
+    : 'for' '(' Identifier 'in' expression 'to' expression ')'  block
+    ;
+
+whileStatement
+    : 'while' '(' expression ')' block
     ;
 
 functionDeclStatement
-    : 'def' ID '(' idList? ')' '=' expression NEWLINE
-    | 'def' ID '(' idList? ')' '=' block
+    : 'def' Identifier '(' idList? ')' '=' expression Newline
+    | 'def' Identifier '(' idList? ')' '=' block
     ;
 
 idList
-    : ID ( ',' ID )*
+    : Identifier ( ',' Identifier )*
     ;
 
 block
@@ -68,8 +74,11 @@ block
     ;
 
 functionCall
-    : ID '(' ( expressionList )? ')'    #identifierFunctionCall
-    | 'println' '(' expression? ')'     #printlnFunctionCall
+    : Identifier '(' ( expressionList )? ')'    #identifierFunctionCall
+    | Println '(' expression? ')'  #printlnFunctionCall
+    | Print '(' expression ')'     #printFunctionCall
+    | Assert '(' expression ')'    #assertFunctionCall
+    | Size '(' expression ')'      #sizeFunctionCall
     ;
 expressionList
     : expression ( ',' expression )*
@@ -93,14 +102,20 @@ expression
     | expression '&&' expression                #andExpression
     | expression '||' expression                #orExpression
     | expression '?' expression ':' expression  #ternaryExpression
-    | INT                                       #intExpression
-    | FLOAT                                     #floatExpression
-    | BOOL                                      #boolExpression
-    | NULL                                      #nullExpression
+    | expression 'in' expression                #inExpression
+    | Int                                       #intExpression
+    | Float                                     #floatExpression
+    | Bool                                      #boolExpression
+    | Null                                      #nullExpression
     | functionCall                              #functionCallExpression
-    | ID indexes?                               #identifierExpression
-    | STRING indexes?                           #stringExpression
+    | list indexes?                             #listExpression
+    | Identifier indexes?                               #identifierExpression
+    | String indexes?                           #stringExpression
     | '(' expression ')' indexes?               #expressionExpression
+    ;
+
+list
+    : '[' expressionList? ']'
     ;
 
 indexes
@@ -108,49 +123,51 @@ indexes
     ;
 
 eos
-    : SEMICOLON
-    | NEWLINE
-    | EOF
-    | eos SEMICOLON
-    | eos NEWLINE
+    : eos Semicolon
+    | eos Newline
+    | Semicolon
+    | Newline
     ;
 
-COMMA : ',';
-SEMICOLON : ';';
-NEWLINE : '\r'? '\n';
-NULL: 'null' ;
+Println  : 'println';
+Print    : 'print';
+Input    : 'input';
+Assert   : 'assert';
+Size     : 'size';
 
-// Identifier
-ID  : [a-zA-Z_] [a-zA-Z_0-9]* ;
-
-// String
-STRING
-    : '"' ( ESC|. )*? '"';
-
-// Comments
-SL_COMMENT  : '//' .*? '\r'? '\n' -> skip ; // Match "//" stuff '\n'
-ML_COMMENT  : '/*' .*? '*/' -> skip ; // Match "/*" stuff "*/"
-
-// White spaces
-WS  : [ \t]+ -> channel(HIDDEN) ; // match 1-or-more whitespace but discard
+Comma : ',';
+Semicolon : ';';
+Newline : '\r'? '\n';
+Null: 'null' ;
 
 
-INT
-    : ('0' | '1'..'9' DIGIT*)
+Int
+    : ('0' | [1-9] Digit*)
     ;
 
-FLOAT
-    : DIGIT+ '.' DIGIT*
-    | '.' DIGIT+
+Float
+    : Int ('.' Digit*)?
     ;
 
-// Boolean
-BOOL
+Bool
     : 'true'
     | 'false'
     ;
 
-fragment ESC    : '\\' [btnr"\\] ; // \b, \t, \n etc...
+Identifier  : [a-zA-Z_] [a-zA-Z_0-9]* ;
 
-fragment DIGIT  : '0' .. '9' ;
+String
+    : ["] (~["\r\n] | '\\\\' | '\\"')* ["]
+    | ['] (~['\r\n] | '\\\\' | '\\\'')* [']
+    ;
+
+Comment
+    : ('//' ~[\r\n]* | '/*' .*? '*/') -> skip
+    ;
+
+Space
+    : [ \t] -> skip
+    ;
+
+fragment Digit  : '0' .. '9' ;
 
